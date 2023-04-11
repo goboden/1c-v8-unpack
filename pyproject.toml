@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "1c-v8-unpack"
+version = "0.1.0"
+description = ""
+authors = ["Denis Terentev <goboden@yandex.ru>"]
+readme = "README.md"
+packages = [{include = "1c_v8_unpack"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+flake8 = "^6.0.0"
+yapf = "^0.32.0"
+mypy = "^1.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
