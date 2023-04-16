@@ -1,4 +1,5 @@
 from io import BufferedIOBase
+import zlib
 import logging
 from pprint import pprint
 
@@ -8,8 +9,30 @@ log = logging.getLogger(__name__)
 INT_MAX = 2147483647
 
 
-class Container:
+class WrongBlockHeaderException(Exception):
+    pass
 
+
+class FileNotFoundInIndexException(Exception):
+    def __init__(self, filename):
+        self.message = f'File "{filename}" is not found in container index'
+        super().__init__(self.message)
+
+
+class Block:
+    def __init__(self):
+        self.document_length: int
+        self.length: int
+        self.next_block_address: int
+        self.data: bytearray
+
+    def read_header(self, header: bytearray):
+        self.document_length = bytes_to_address(header[2:10])
+        self.length = bytes_to_address(header[11:19])
+        self.next_block_address = bytes_to_address(header[20:28])
+
+
+class Container:
     def __init__(self, file: BufferedIOBase) -> None:
         self.source = file
         self.header = bytearray()
@@ -34,37 +57,47 @@ class Container:
 
     def read_document(self, address: int) -> bytearray:
         document = bytearray()
+        document_length = 0
         next_block_address = address
-        while next_block_address != INT_MAX:
-            next_block_address, block = self.read_block(next_block_address)
-            document += block
-        return document
 
-    def read_block(self, address: int) -> bytearray:
+        while next_block_address != INT_MAX:
+            block = self.read_block(next_block_address)
+            next_block_address = block.next_block_address
+            document += block.data
+            if block.document_length != 0:
+                document_length = block.document_length
+        return document[:document_length]
+
+    def read_block(self, address: int) -> Block:
+        block = Block()
+
         header = self.read(address, 31)
         if header[0] != 13:
-            pass
-        # print(f'{len(header)} | {bytearray_repr(header)}')
+            raise WrongBlockHeaderException
+        block.read_header(header)
+        block.data = self.read(address + 31, block.length)
 
-        # doc_len = bytearray_to_address(header[2:10])
-        length = bytearray_to_address(header[11:19])
-        next = bytearray_to_address(header[20:28])
+        return block
 
-        data = self.read(address + 31, length)
+    def read_file(self, filename: str, deflate: bool = True) -> bytearray:
+        if filename not in self.index:
+            raise FileNotFoundInIndexException(filename)
+        file_address = self.index[filename]
+        file_data = self.read_document(file_address)
+        if deflate:
+            file_data = zlib.decompress(file_data, wbits=-zlib.MAX_WBITS)
+        return file_data
 
-        return next, data
+
+def bytes_to_address(bytes: bytearray) -> int:
+    return int(''.join([chr(byte) for byte in bytes]), base=16)
 
 
-def bytearray_to_address(b: bytearray) -> int:
-    return int(''.join([chr(byte) for byte in b]), base=16)
-
-
-def bytes_to_filename(b: bytearray) -> str:
+def bytes_to_filename(bytes: bytearray) -> str:
     filename = ''
-    for i in range(0, len(b), 2):
-        sym = b[i: i + 2]
-        filename += chr(int.from_bytes(sym, byteorder='little', signed=False))
-    return filename
+    for i in range(0, len(bytes), 2):
+        filename += chr(int.from_bytes(bytes[i: i + 2], byteorder='little', signed=False))
+    return filename[:-2]
 
 
 def bytearray_repr(bytes: bytearray) -> str:
@@ -74,10 +107,12 @@ def bytearray_repr(bytes: bytearray) -> str:
 if __name__ == '__main__':
     with open('test_data/ExtForm.epf', '+rb') as f:
         con = Container(f)
-        con._read_index()
-
-        pprint(con.index)
+        try:
+            d = con.read_file('root')
+            pprint(d)
+        except FileNotFoundInIndexException as e:
+            print(e.message)
 
         # n, c = con.read_document(n)
-        
+
         # print(f'{len(b)} | {bytearray_repr(b)}')
