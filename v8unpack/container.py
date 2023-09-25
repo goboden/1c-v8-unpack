@@ -1,7 +1,6 @@
 from typing import BinaryIO
 import zlib
 import logging
-from pprint import pprint
 
 import osml
 
@@ -109,7 +108,6 @@ class Container:
         return file_data
 
 
-def bytes_to_filename(bytes_in: bytes) -> str:
 def bytes_to_address(bytes_in: bytes) -> int:
     return int(''.join([chr(byte) for byte in bytes_in]), base=16)
 
@@ -121,8 +119,8 @@ def bytes_to_filename(bytes_in: bytes) -> str:
     return filename[:-2]
 
 
-def bytearray_repr(bytes: bytes) -> str:
-    return ' '.join([hex(byte) for byte in bytes])
+def bytearray_repr(bytes_in: bytes) -> str:
+    return ' '.join([hex(byte) for byte in bytes_in])
 
 
 def file_is_container(file_data: bytes) -> bool:
