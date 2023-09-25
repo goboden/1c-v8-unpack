@@ -1,9 +1,10 @@
-import logging
+from typing import BinaryIO
 import zlib
-from io import BufferedIOBase, BytesIO
+import logging
 from pprint import pprint
 
 import osml
+
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class Block:
 
 
 class Container:
-    def __init__(self, file: BufferedIOBase):
+    def __init__(self, file: BinaryIO):
         self.source = file
         self.header = bytes()
         self.index: dict[str, int] = {}
@@ -88,12 +89,14 @@ class Container:
         return document[:document_length]
 
     def read_block(self, address: int) -> Block:
+        block = Block()
+
         header = self.read(address, 31)
         if header[0] != 13:
             raise WrongBlockHeaderException(header[0])
-        block = Block()
         block.read_header(header)
         block.data = self.read(address + 31, block.length)
+
         return block
 
     def read_file(self, filename: str, deflate: bool = True) -> bytes:
@@ -107,14 +110,19 @@ class Container:
 
 
 def bytes_to_filename(bytes_in: bytes) -> str:
+def bytes_to_address(bytes_in: bytes) -> int:
+    return int(''.join([chr(byte) for byte in bytes_in]), base=16)
+
+
+def bytes_to_filename(bytes_in: bytes) -> str:
     filename = ''
     for i in range(0, len(bytes_in), 2):
         filename += chr(int.from_bytes(bytes_in[i: i + 2], byteorder='little'))
     return filename[:-2]
 
 
-def bytearray_repr(bytes_in: bytes) -> str:
-    return ' '.join([hex(byte) for byte in bytes_in])
+def bytearray_repr(bytes: bytes) -> str:
+    return ' '.join([hex(byte) for byte in bytes])
 
 
 def file_is_container(file_data: bytes) -> bool:
@@ -124,8 +132,12 @@ def file_is_container(file_data: bytes) -> bool:
 if __name__ == '__main__':
     with open('test_data/ExtForm.epf', '+rb') as f:
         try:
+            from pprint import pprint
+
             con = Container(f)
-            pprint(con.index)
+            # pprint(con.index)
+            # pprint(con.metadata)
+            # pprint(con.metadata[1])
 
             # pprint(con.metadata[3][1])
             # pprint(con.metadata[3][1][1][3][1][1][2])
@@ -133,19 +145,18 @@ if __name__ == '__main__':
             # pprint(con.metadata_id)
             # pprint(metadata.METADATA[con.metadata_id]['forms'])
 
-            d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
-            print(file_is_container(d))
+            # d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
+            # print(file_is_container(d))
             # d = con.read_file('f894cf26-3fd1-4688-bf8c-098944f6b435.0')
             # print(file_is_container(d))
-            # print(d.decode())
+            # # print(d.decode())
             # osml_decoded = osml.decode(d.decode(encoding='utf-8-sig'))
             # pprint(osml_decoded)
 
-            # container
-            d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
-            if file_is_container(d):
-                c2 = Container(BytesIO(d))
-                print(c2.index)
+            # # container
+            # d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
+            # c2 = Container(BytesIO(d))
+            # print(c2.index)
             # d2 = c2.read_file('module', False)
             # print(d2.decode())
             # # osml_decoded = osml.decode(d2.decode())

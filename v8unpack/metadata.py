@@ -52,6 +52,19 @@ METADATA = {
 }
 
 
+class Module:
+    def __init__(self) -> None:
+        self.name: str
+        self.uuid: str
+
+
+class Form:
+    def __init__(self) -> None:
+        self.name: str
+        self.uuid: str
+        self.module: Module
+
+
 class MetadataObject:
     # @classmethod
     # def from_container(container: Container):
@@ -63,9 +76,21 @@ class MetadataObject:
     def _read_name(container):
         pass
 
+
+    @classmethod
+    def __get_metadata_id(cls, container: Container) -> str:
+        root_file = container.read_file('root')
+        root = osml_decode(root_file.decode(encoding='utf-8-sig'))
+        metadata_filename = root[1]
+        metadata_file = container.read_file(metadata_filename)
+        metadata = osml_decode(metadata_file.decode(encoding='utf-8-sig'))
+        return metadata[3][0]
+
     def __init__(self) -> None:
+        self.metadata: str
         self.name: str
-        self.module: str
+        self.uuid: str
+        self.modules: list[Module]
         self.forms: list[Form]
 
 
@@ -75,5 +100,15 @@ class Form:
         self.module: str
 
 
-if __name__ == '__main__':
+class DataProcessor(MetadataObject):
     pass
+
+
+if __name__ == '__main__':
+    with open('test_data/ExtForm.epf', '+rb') as f:
+        try:
+            con = Container(f)
+            metadata_object = MetadataObject.from_container(con)
+
+        except FileNotFoundInIndexException as e:
+            print(e.message)
