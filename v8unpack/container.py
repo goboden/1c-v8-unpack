@@ -1,9 +1,6 @@
-from io import BufferedIOBase
+from typing import BinaryIO
 import zlib
 import logging
-from pprint import pprint
-
-import osml
 
 
 log = logging.getLogger(__name__)
@@ -25,10 +22,10 @@ class FileNotFoundInIndexException(Exception):
 
 class Block:
     def __init__(self) -> None:
-        self.document_length: int
-        self.length: int
-        self.next_block_address: int
-        self.data: bytes
+        self.document_length: int = 0
+        self.length: int = 0
+        self.next_block_address: int = 0
+        self.data: bytes = bytes()
 
     def read_header(self, header: bytes):
         self.document_length = bytes_to_address(header[2:10])
@@ -37,7 +34,7 @@ class Block:
 
 
 class Container:
-    def __init__(self, file: BufferedIOBase):
+    def __init__(self, file: BinaryIO):
         self.source = file
         self.header = bytes()
         self.index: dict[str, int] = {}
@@ -45,7 +42,7 @@ class Container:
         self.metadata: list = []
 
         self._read_index()
-        self._read_metadata()
+        # self._read_metadata()
 
     def read(self, begin: int, bytes_to_read: int) -> bytes:
         self.source.seek(begin)
@@ -62,14 +59,14 @@ class Container:
             filename = bytes_to_filename(attributes_data[20:])
             self.index[filename] = content_address
 
-    def _read_metadata(self):
-        root_file = self.read_file('root')
-        root = osml.decode(root_file.decode(encoding='utf-8-sig'))
-        metadata_filename = root[1]
-        metadata_file = self.read_file(metadata_filename)
+    # def _read_metadata(self):
+    #     root_file = self.read_file('root')
+    #     root = osml.decode(root_file.decode(encoding='utf-8-sig'))
+    #     metadata_filename = root[1]
+    #     metadata_file = self.read_file(metadata_filename)
 
-        self.metadata = osml.decode(metadata_file.decode(encoding='utf-8-sig'))
-        self.metadata_id = self.metadata[3][0]
+    #     self.metadata = osml.decode(metadata_file.decode(encoding='utf-8-sig'))
+    #     self.metadata_id = self.metadata[3][0]
 
     def read_document(self, address: int) -> bytes:
         document = bytes()
@@ -105,19 +102,19 @@ class Container:
         return file_data
 
 
-def bytes_to_address(bytes: bytes) -> int:
-    return int(''.join([chr(byte) for byte in bytes]), base=16)
+def bytes_to_address(bytes_in: bytes) -> int:
+    return int(''.join([chr(byte) for byte in bytes_in]), base=16)
 
 
-def bytes_to_filename(bytes: bytes) -> str:
+def bytes_to_filename(bytes_in: bytes) -> str:
     filename = ''
-    for i in range(0, len(bytes), 2):
-        filename += chr(int.from_bytes(bytes[i: i + 2], byteorder='little', signed=False))
+    for i in range(0, len(bytes_in), 2):
+        filename += chr(int.from_bytes(bytes_in[i: i + 2], byteorder='little', signed=False))
     return filename[:-2]
 
 
-def bytearray_repr(bytes: bytes) -> str:
-    return ' '.join([hex(byte) for byte in bytes])
+def bytearray_repr(bytes_in: bytes) -> str:
+    return ' '.join([hex(byte) for byte in bytes_in])
 
 
 def file_is_container(file_data: bytes) -> bool:
@@ -127,8 +124,12 @@ def file_is_container(file_data: bytes) -> bool:
 if __name__ == '__main__':
     with open('test_data/ExtForm.epf', '+rb') as f:
         try:
+            from pprint import pprint
+
             con = Container(f)
-            pprint(con.index)
+            # pprint(con.index)
+            # pprint(con.metadata)
+            # pprint(con.metadata[1])
 
             # pprint(con.metadata[3][1])
             # pprint(con.metadata[3][1][1][3][1][1][2])

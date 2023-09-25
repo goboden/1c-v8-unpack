@@ -1,4 +1,6 @@
 from enum import Enum
+from container import Container, FileNotFoundInIndexException
+from osml import decode as osml_decode
 
 
 class MetadataTypes(Enum):
@@ -39,23 +41,53 @@ METADATA = {
 }
 
 
-class MetadataObject:
-    # @classmethod
-    # def from_container(container: Container):
-    #     metadata_object = MetadataObject()
-    #     # metadata_object.name = MetadataObject.
-    #     return metadata_object
-
-    def _read_name(container):
-        pass
-
-    def __init__(self):
+class Module:
+    def __init__(self) -> None:
         self.name: str
-        self.module: str
-        self.forms: list[Form]
+        self.uuid: str
 
 
 class Form:
-    def __init__(self):
+    def __init__(self) -> None:
         self.name: str
-        self.module: str
+        self.uuid: str
+        self.module: Module
+
+
+class MetadataObject:
+    __METADATA: dict[str, str] = {}
+
+    # @classmethod
+    # def from_container(cls, container: Container) -> MetadataObject:
+    #     # metadata_id = cls.__get_metadata_id(container)
+    #     return cls
+
+    @classmethod
+    def __get_metadata_id(cls, container: Container) -> str:
+        root_file = container.read_file('root')
+        root = osml_decode(root_file.decode(encoding='utf-8-sig'))
+        metadata_filename = root[1]
+        metadata_file = container.read_file(metadata_filename)
+        metadata = osml_decode(metadata_file.decode(encoding='utf-8-sig'))
+        return metadata[3][0]
+
+    def __init__(self) -> None:
+        self.metadata: str
+        self.name: str
+        self.uuid: str
+        self.modules: list[Module]
+        self.forms: list[Form]
+
+
+class DataProcessor(MetadataObject):
+    pass
+
+
+if __name__ == '__main__':
+    with open('test_data/ExtForm.epf', '+rb') as f:
+        try:
+            con = Container(f)
+            metadata_object = MetadataObject.from_container(con)
+
+        except FileNotFoundInIndexException as e:
+            print(e.message)
