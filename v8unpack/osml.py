@@ -1,13 +1,13 @@
 class WrongOSMLFormatEcxeption(Exception):
-    def __init__(self, char):
+    def __init__(self, char: str):
         self.message = f'Wrong OSML format. First char: "{char}"'
         super().__init__(self.message)
 
 
 class _Parser:
     def __init__(self, osml_string: str):
-        self.osml_string = osml_string
-        self.position = 0
+        self.osml_string: str = osml_string
+        self.position: int = 0
 
     def parse(self) -> list:
         char = self._current_char()

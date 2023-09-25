@@ -1,10 +1,9 @@
-from io import BufferedIOBase
-import zlib
 import logging
+import zlib
+from io import BufferedIOBase, BytesIO
 from pprint import pprint
 
 import osml
-
 
 log = logging.getLogger(__name__)
 
@@ -25,15 +24,19 @@ class FileNotFoundInIndexException(Exception):
 
 class Block:
     def __init__(self) -> None:
-        self.document_length: int
-        self.length: int
-        self.next_block_address: int
-        self.data: bytes
+        self.document_length: int = 0
+        self.length: int = 0
+        self.next_block_address: int = 0
+        self.data: bytes = bytes()
+
+    @staticmethod
+    def _address(bytes_in: bytes) -> int:
+        return int(''.join([chr(byte) for byte in bytes_in]), base=16)
 
     def read_header(self, header: bytes):
-        self.document_length = bytes_to_address(header[2:10])
-        self.length = bytes_to_address(header[11:19])
-        self.next_block_address = bytes_to_address(header[20:28])
+        self.document_length = self._address(header[2:10])
+        self.length = self._address(header[11:19])
+        self.next_block_address = self._address(header[20:28])
 
 
 class Container:
@@ -45,7 +48,7 @@ class Container:
         self.metadata: list = []
 
         self._read_index()
-        self._read_metadata()
+        # self._read_metadata()
 
     def read(self, begin: int, bytes_to_read: int) -> bytes:
         self.source.seek(begin)
@@ -85,14 +88,12 @@ class Container:
         return document[:document_length]
 
     def read_block(self, address: int) -> Block:
-        block = Block()
-
         header = self.read(address, 31)
         if header[0] != 13:
             raise WrongBlockHeaderException(header[0])
+        block = Block()
         block.read_header(header)
         block.data = self.read(address + 31, block.length)
-
         return block
 
     def read_file(self, filename: str, deflate: bool = True) -> bytes:
@@ -105,23 +106,19 @@ class Container:
         return file_data
 
 
-def bytes_to_address(bytes: bytes) -> int:
-    return int(''.join([chr(byte) for byte in bytes]), base=16)
-
-
-def bytes_to_filename(bytes: bytes) -> str:
+def bytes_to_filename(bytes_in: bytes) -> str:
     filename = ''
-    for i in range(0, len(bytes), 2):
-        filename += chr(int.from_bytes(bytes[i: i + 2], byteorder='little', signed=False))
+    for i in range(0, len(bytes_in), 2):
+        filename += chr(int.from_bytes(bytes_in[i: i + 2], byteorder='little'))
     return filename[:-2]
 
 
-def bytearray_repr(bytes: bytes) -> str:
-    return ' '.join([hex(byte) for byte in bytes])
+def bytearray_repr(bytes_in: bytes) -> str:
+    return ' '.join([hex(byte) for byte in bytes_in])
 
 
 def file_is_container(file_data: bytes) -> bool:
-    return file_data[:4] == b'\xff\xff\xff\x7f'
+    return int.from_bytes(file_data[:4], byteorder='little') == INT_MAX
 
 
 if __name__ == '__main__':
@@ -136,18 +133,19 @@ if __name__ == '__main__':
             # pprint(con.metadata_id)
             # pprint(metadata.METADATA[con.metadata_id]['forms'])
 
-            # d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
-            # print(file_is_container(d))
+            d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
+            print(file_is_container(d))
             # d = con.read_file('f894cf26-3fd1-4688-bf8c-098944f6b435.0')
             # print(file_is_container(d))
-            # # print(d.decode())
+            # print(d.decode())
             # osml_decoded = osml.decode(d.decode(encoding='utf-8-sig'))
             # pprint(osml_decoded)
 
-            # # container
-            # d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
-            # c2 = Container(BytesIO(d))
-            # print(c2.index)
+            # container
+            d = con.read_file('dc0ab8e3-733d-4741-8ef6-682a5c43fafc.0')
+            if file_is_container(d):
+                c2 = Container(BytesIO(d))
+                print(c2.index)
             # d2 = c2.read_file('module', False)
             # print(d2.decode())
             # # osml_decoded = osml.decode(d2.decode())

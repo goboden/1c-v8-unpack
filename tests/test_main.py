@@ -1,7 +1,6 @@
-import v8unpack.container as container
-
 import logging
 
+import v8unpack.container as container
 
 log = logging.getLogger(__name__)
 

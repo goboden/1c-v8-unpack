@@ -26,6 +26,8 @@ pip-log.txt
 /test.py
 /test_*.*
 
+/.mypy_cache
+
 pip-wheel-metadata
 setup.cfg
 MANIFEST.in

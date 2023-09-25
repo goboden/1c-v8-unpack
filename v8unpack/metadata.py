@@ -1,10 +1,23 @@
 from enum import Enum
+from dataclasses import dataclass
+
+
+@dataclass
+class MetadataType:
+    name: str
+    uid: str
 
 
 class MetadataTypes(Enum):
-    external_data_processor = 'c3831ec8-d8d5-4f93-8a22-f9bfae07327f'
-    external_report = 'e41aff26-25cf-4bb6-b6c1-3f478a75f374'
-    configuration = '9cd510cd-abfc-11d4-9434-004095e12fc7'
+    external_data_processor = MetadataType(
+        name='ExternalDataProcessor',
+        uid='c3831ec8-d8d5-4f93-8a22-f9bfae07327f')
+    external_report = MetadataType(
+        name='ExternalReport',
+        uid='e41aff26-25cf-4bb6-b6c1-3f478a75f374')
+    configuration = MetadataType(
+        name='Configuration',
+        uid='9cd510cd-abfc-11d4-9434-004095e12fc7')
 
 
 class MetadataFields(Enum):
@@ -46,16 +59,21 @@ class MetadataObject:
     #     # metadata_object.name = MetadataObject.
     #     return metadata_object
 
+    @staticmethod
     def _read_name(container):
         pass
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.name: str
         self.module: str
         self.forms: list[Form]
 
 
 class Form:
-    def __init__(self):
+    def __init__(self) -> None:
         self.name: str
         self.module: str
+
+
+if __name__ == '__main__':
+    pass
